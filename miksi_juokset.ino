@@ -6,7 +6,6 @@ const int ledPinGreen = 9;
 const int buttonPinUp = 6;
 const int buttonPinRight = 3;
 const int buttonPinDown = 5;
-int i = 15;
 
 unsigned long startTime = millis();
 
@@ -23,7 +22,7 @@ byte humanHead[] = {
   B00100,
 };
 
-byte headSaving[] = {
+byte headBending[] = {
   B00000,
   B00000,
   B00000,
@@ -136,23 +135,43 @@ void setup() {
   lcd.clear(); /*прошло 5 секунд*/
 }
 
+void spikeAttack() {
+  const int upperAttack = 1; 
+  const int lowerAttack = 2;
+
+
+  if (upperAttack) {
+    unsigned long attackTime = millis();
+
+    if (millis() - attackTime >= 400) {
+      attackTime = millis();
+      for (int i = 15; i > 2; i--) {
+        lcd.createChar(5, upperSpike);
+        lcd.setCursor(i, 0);
+        lcd.write(5);
+      }
+    }
+  }
+}
+
 void loop() {
   digitalWrite(ledPinRed, LOW);
   digitalWrite(ledPinGreen, LOW);
-  int buttonUpState = digitalRead(buttonPinUp);
-  int buttonRightState = digitalRead(buttonPinRight);
-  int buttonDownState = digitalRead(buttonPinDown);
-  unsigned long timeAfterTitle = millis();
+  unsigned long buttonPressTime = millis();
   unsigned long lastUpdate = millis();
-  Serial.println(timeAfterTitle);
+  bool standing = true;
+  bool jumping = true;
 
   while (millis() - startTime < 90000) {
-    lcd.createChar(0, humanHead);
-    lcd.setCursor(0, 0);
-    lcd.write(0);
+
+    int buttonUpState = digitalRead(buttonPinUp);
+    int buttonDownState = digitalRead(buttonPinDown);
 
     if (millis() - lastUpdate >= 500) {
       lastUpdate = millis();
+      lcd.createChar(0, humanHead);
+      lcd.setCursor(0, 0);
+      lcd.write(0);
 
       static bool standing = true;
       if (standing) {
@@ -165,11 +184,32 @@ void loop() {
         lcd.write(2);
       }
       standing = !standing;
+
+      if (buttonUpState == HIGH) {
+        static bool jumping = true;
+        if (jumping) {
+          lcd.createChar(3, bodyJumping);
+          lcd.setCursor(0, 1);
+          lcd.write(3);
+        } else {
+          lcd.setCursor(0, 1);
+          lcd.write(1);
+        }
+      }
+
+      if (buttonDownState == HIGH) {
+        static bool bending = true;
+        if (bending) {
+          lcd.createChar(4, headBending);
+          lcd.setCursor(0, 0);
+          lcd.write(4);
+        } else {
+          lcd.setCursor(0, 0);
+          lcd.write(0);
+        }
+      }
+      spikeAttack();
     }
     delay(50);
-
-    if (buttonPinUp == HIGH) {
-      
-    }
   }
 }
