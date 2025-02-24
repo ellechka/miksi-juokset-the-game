@@ -7,7 +7,12 @@ const int buttonPinUp = 6;
 const int buttonPinRight = 3;
 const int buttonPinDown = 5;
 
-unsigned long startTime = millis();
+unsigned long startTime; //
+unsigned long lastUpdate = 0;
+bool standing = true;
+bool jumping = true;
+bool bending = true;
+long randNum;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -133,83 +138,135 @@ void setup() {
   digitalWrite(ledPinGreen, HIGH);
   delay(1500);
   lcd.clear(); /*прошло 5 секунд*/
+
+  startTime = millis();
 }
 
 void spikeAttack() {
-  const int upperAttack = 1; 
-  const int lowerAttack = 2;
-
-
-  if (upperAttack) {
-    unsigned long attackTime = millis();
-
-    if (millis() - attackTime >= 400) {
-      attackTime = millis();
-      for (int i = 15; i > 2; i--) {
-        lcd.createChar(5, upperSpike);
-        lcd.setCursor(i, 0);
-        lcd.write(5);
-      }
-    }
-  }
-}
-
-void loop() {
-  digitalWrite(ledPinRed, LOW);
-  digitalWrite(ledPinGreen, LOW);
-  unsigned long buttonPressTime = millis();
-  unsigned long lastUpdate = millis();
-  bool standing = true;
-  bool jumping = true;
-
-  while (millis() - startTime < 90000) {
-
     int buttonUpState = digitalRead(buttonPinUp);
     int buttonDownState = digitalRead(buttonPinDown);
+    static int spikePos = 15;
+    static unsigned long lastSpikeMove = 0;
+    static bool spikeActive = false;
+    static String randAttack = "";
+    
+    if (!spikeActive) {
+        spikePos = 15;
+        randAttack = String(random(1, 3));
+        spikeActive = true;
+    }
 
-    if (millis() - lastUpdate >= 500) {
-      lastUpdate = millis();
+    if (millis() - lastSpikeMove >= 300) {
+      lastSpikeMove = millis();
+        
+      lcd.setCursor(spikePos, randAttack == "1" ? 0 : 1);
+      lcd.write(' ');
+
+      spikePos--;
+
+      if (spikePos >= 0) {
+        lcd.createChar(6, randAttack == "1" ? upperSpike : lowerSpike);
+        lcd.setCursor(spikePos, randAttack == "1" ? 0 : 1);
+        lcd.write(6);
+
+        if (spikePos == 0) {
+          if (randAttack == "1") {
+            if (buttonDownState == HIGH) {
+              lcd.createChar(7, headUnderSpike);
+              lcd.setCursor(0, 0);
+              lcd.write(7);
+            } else {
+              lcd.clear();
+              lcd.print("GAME OVER");
+              delay(2000);
+              lcd.clear();
+              spikeActive = false;
+              return;
+            }
+          } else if (randAttack == "2") {
+              if (buttonUpState == HIGH) {
+                lcd.createChar(8, bodyOverSpike);
+                lcd.setCursor(0, 1);
+                lcd.write(8);
+            } else {
+              lcd.clear();
+              lcd.print("GAME OVER");
+              delay(2000);
+              lcd.clear();
+              spikeActive = false;
+              return;
+            }
+          } else {
+            spikeActive = false;
+          }
+        }
+      } else {
+          spikeActive = false;
+      }
+    }
+}
+
+
+void loop() {
+  if (millis() - startTime >= 90000) return;
+
+  digitalWrite(ledPinRed, LOW);
+  digitalWrite(ledPinGreen, LOW);
+
+  int buttonUpState = digitalRead(buttonPinUp);
+  int buttonDownState = digitalRead(buttonPinDown);
+
+  if (millis() - lastUpdate >= 500) {
+    lastUpdate = millis();
+
+    if (standing) {
       lcd.createChar(0, humanHead);
       lcd.setCursor(0, 0);
       lcd.write(0);
 
-      static bool standing = true;
-      if (standing) {
-        lcd.createChar(1, bodyStanding);
+      lcd.createChar(1, bodyStanding);
+      lcd.setCursor(0, 1);
+      lcd.write(1);
+    } else {
+      lcd.createChar(0, humanHead);
+      lcd.setCursor(0, 0);
+      lcd.write(0);
+
+      lcd.createChar(2, bodyWalking);
+      lcd.setCursor(0, 1);
+      lcd.write(2);
+    }
+    standing = !standing;
+
+    if (buttonUpState == HIGH) {
+      static bool jumping = true;
+      if (jumping) {
+        lcd.createChar(3, bodyJumping);
+        lcd.setCursor(0, 1);
+        lcd.write(3);
+      } else {
         lcd.setCursor(0, 1);
         lcd.write(1);
-      } else {
-        lcd.createChar(2, bodyWalking);
-        lcd.setCursor(0, 1);
-        lcd.write(2);
       }
-      standing = !standing;
-
-      if (buttonUpState == HIGH) {
-        static bool jumping = true;
-        if (jumping) {
-          lcd.createChar(3, bodyJumping);
-          lcd.setCursor(0, 1);
-          lcd.write(3);
-        } else {
-          lcd.setCursor(0, 1);
-          lcd.write(1);
-        }
-      }
-
-      if (buttonDownState == HIGH) {
-        static bool bending = true;
-        if (bending) {
-          lcd.createChar(4, headBending);
-          lcd.setCursor(0, 0);
-          lcd.write(4);
-        } else {
-          lcd.setCursor(0, 0);
-          lcd.write(0);
-        }
-      }
-      spikeAttack();
     }
-    delay(50);
+    jumping = !jumping;
+
+    if (buttonDownState == HIGH) {
+      if (bending) {
+        lcd.createChar(4, headBending);
+        lcd.setCursor(0, 0);
+        lcd.write(4);
+      } else {
+        lcd.setCursor(1, 0);
+        lcd.write(0);
+      }
+    }
+
+    if (millis() - startTime >= 3000) {
+      spikeAttack();
+      delay(400);
+    }
   }
+
+  delay(50);
 }
