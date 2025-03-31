@@ -9,6 +9,7 @@ const int ledPinYellow = 9;
 const int buttonPinUp = 6;
 const int buttonPinRight = 4;
 const int buttonPinDown = 5;
+const int buzzerPin = 10;
  
 unsigned int startTime = 0; 
 unsigned long lastUpdate = 0;
@@ -235,6 +236,7 @@ void setup() {
   pinMode(buttonPinUp, INPUT_PULLUP);
   pinMode(buttonPinRight, INPUT_PULLUP);
   pinMode(buttonPinDown, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
  
   randomSeed(analogRead(0));
   recordTime = ((unsigned long)EEPROM.read(0) << 24) | 
@@ -259,6 +261,9 @@ void setup() {
   digitalWrite(ledPinRed, HIGH);
   digitalWrite(ledPinGreen, HIGH);
   digitalWrite(ledPinYellow, HIGH);
+  tone(buzzerPin, 500);
+  delay(500);
+  noTone(buzzerPin);
   delay(1000);
   lcd.clear(); 
   
